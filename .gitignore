@@ -1,0 +1,50 @@
+# --- Secrets / local-only ---
+backend/cookies.txt
+*.cookies.txt
+.env
+.env.*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+.Python
+build/
+dist/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/.venv/
+
+# --- Downloaded clips (generated at runtime, not source) ---
+downloads/*
+!downloads/.gitkeep
+
+# --- Logs ---
+*.log
+server.log
+nohup.out
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- ngrok ---
+ngrok
+ngrok.yml
+.ngrok2/
