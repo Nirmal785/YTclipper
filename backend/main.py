@@ -180,6 +180,12 @@ def video_info(payload: VideoInfoRequest):
         raise HTTPException(status_code=504, detail="Timed out fetching video info.")
 
     if result.returncode != 0:
+        # Print the FULL stderr to server logs (visible in `render logs`,
+        # Railway logs, journalctl, etc.) — the HTTP response only carries
+        # the last line to keep it readable, but full output is often
+        # needed to diagnose things like YouTube's bot-detection wall.
+        print(f"[video-info] yt-dlp failed for source={source!r}:", file=sys.stderr)
+        print(result.stderr, file=sys.stderr)
         msg = result.stderr.strip().splitlines()[-1] if result.stderr else "Unknown error"
         if source == "x" and not COOKIES_FILE.exists():
             msg = (
