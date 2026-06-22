@@ -124,7 +124,6 @@ class ClipRequest(BaseModel):
     url: str
     start: float  # seconds
     end: float    # seconds
-    quality: str = "1080"  # "best", "1080", "720", "480", "360"
 
     @field_validator("url")
     @classmethod
@@ -132,13 +131,6 @@ class ClipRequest(BaseModel):
         if not detect_source(v):
             raise ValueError("That doesn't look like a YouTube or X (Twitter) video URL.")
         return v.strip()
-
-    @field_validator("quality")
-    @classmethod
-    def validate_quality(cls, v: str) -> str:
-        if v not in ("best", "1080", "720", "480", "360"):
-            return "1080"
-        return v
 
 
 def seconds_to_hhmmss(total_seconds: float) -> str:
@@ -306,7 +298,7 @@ def create_clip(payload: ClipRequest):
 
     thread = threading.Thread(
         target=_run_clip_job,
-        args=(job_id, payload.url, payload.start, payload.end, source, payload.quality),
+        args=(job_id, payload.url, payload.start, payload.end, source),
         daemon=True,
     )
     thread.start()
@@ -329,18 +321,9 @@ FRAGMENT_TEMPLATE = "FR|%(progress.fragment_index)s|%(progress.fragment_count)s"
 POSTPROC_TEMPLATE = "postprocess:PP|%(progress._percent_str)s"
 
 
-def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, quality: str = "1080"):
+def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str):
     out_template = str(DOWNLOAD_DIR / f"{job_id}.%(ext)s")
     section = f"*{seconds_to_hhmmss(start)}-{seconds_to_hhmmss(end)}"
-
-    # Build format selector based on requested quality
-    if quality == "best":
-        fmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b"
-    elif quality in ("1080", "720", "480", "360"):
-        h = quality
-        fmt = f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]/b[height<={h}][ext=mp4]/b[height<={h}]"
-    else:
-        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b"
 
     cmd = ["yt-dlp", "--no-playlist"]
     cmd += _cookie_args(source)
@@ -349,7 +332,7 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, 
         "--force-keyframes-at-cuts",
         "--extractor-args", "youtube:player_client=web",
         "--remote-components", "ejs:github",
-        "-f", fmt,
+        "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b",
         "--merge-output-format", "mp4",
         "--newline",
         "--progress-template", PROGRESS_TEMPLATE,
