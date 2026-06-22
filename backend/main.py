@@ -198,6 +198,9 @@ def video_info(payload: VideoInfoRequest):
         "--dump-json",
         "--no-playlist",
         "--skip-download",
+        # Explicitly tell yt-dlp to use deno for YouTube's n-challenge JS solver.
+        # Without this, it may not find the runtime even if deno is on PATH.
+        "--extractor-args", "youtube:player_client=web",
     ]
     cmd += _cookie_args(source)
     cmd.append(payload.url)
@@ -294,8 +297,7 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str):
     cmd += [
         "--download-sections", section,
         "--force-keyframes-at-cuts",
-        # Cap at 1080p — clips rarely need higher, and it skips slow 4K
-        # streams plus the longer mux/cut time that comes with them.
+        "--extractor-args", "youtube:player_client=web",
         "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b",
         "--merge-output-format", "mp4",
         "--newline",

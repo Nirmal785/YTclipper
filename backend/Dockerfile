@@ -2,11 +2,16 @@
 FROM python:3.12-slim
 
 # ffmpeg: needed by yt-dlp to trim/merge video segments.
-# nodejs: needed by yt-dlp to solve YouTube's n-parameter challenge
-# (anti-bot obfuscation layer) — without it, only images can be downloaded.
+# curl + unzip: needed to install deno (better JS runtime support for
+# yt-dlp's n-challenge solver than nodejs on debian-slim).
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg nodejs && \
+    apt-get install -y --no-install-recommends ffmpeg curl unzip && \
     rm -rf /var/lib/apt/lists/*
+
+# Install deno — yt-dlp recommends it over node for challenge solving.
+RUN curl -fsSL https://deno.land/install.sh | sh
+ENV DENO_INSTALL="/root/.deno"
+ENV PATH="${DENO_INSTALL}/bin:${PATH}"
 
 WORKDIR /app
 
@@ -14,6 +19,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY main.py .
+
+# Pre-warm yt-dlp's JS extractor cache so first request isn't slow.
+RUN yt-dlp --update-to stable 2>/dev/null || true
 
 # Container-local writable folder for in-progress/finished clips.
 ENV DOWNLOAD_DIR=/app/downloads
