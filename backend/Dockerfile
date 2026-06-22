@@ -27,5 +27,6 @@ RUN yt-dlp --update-to stable 2>/dev/null || true
 ENV DOWNLOAD_DIR=/app/downloads
 RUN mkdir -p /app/downloads
 
-# Render injects the real port via $PORT at runtime.
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Render/Railway inject the real port via $PORT at runtime.
+# Using /bin/sh -c ensures the variable expands correctly.
+CMD ["/bin/sh", "-c", "exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

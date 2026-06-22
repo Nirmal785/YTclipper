@@ -25,6 +25,7 @@ from pydantic import BaseModel, field_validator
 print(f"=" * 60, file=sys.stderr)
 print(f"  yt-clipper backend starting — version {BACKEND_VERSION}", file=sys.stderr)
 print(f"  loaded from: {__file__}", file=sys.stderr)
+print(f"  PORT env var: {os.environ.get('PORT', 'not set, using 8000')}", file=sys.stderr)
 print(f"=" * 60, file=sys.stderr)
 
 # ---------------------------------------------------------------------------
