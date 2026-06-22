@@ -132,9 +132,12 @@ def seconds_to_hhmmss(total_seconds: float) -> str:
 def _cookie_args(source: Optional[str]) -> list[str]:
     """X/Twitter video almost always requires an authenticated session.
     YouTube usually doesn't, but we'll happily use the same cookies file
-    for YouTube too if present (helps with age-restricted content)."""
+    for YouTube too if present (helps with age-restricted content).
+    --no-update-on-each-download stops yt-dlp trying to write updated
+    session tokens back to the cookies file — necessary on Render where
+    /etc/secrets/ is a read-only filesystem."""
     if COOKIES_FILE.exists():
-        return ["--cookies", str(COOKIES_FILE)]
+        return ["--cookies", str(COOKIES_FILE), "--no-update-on-each-download"]
     return []
 
 
