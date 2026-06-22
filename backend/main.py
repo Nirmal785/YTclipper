@@ -43,11 +43,21 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 # How long a finished clip is kept on disk before being auto-deleted (seconds)
 CLIP_TTL_SECONDS = 60 * 30  # 30 minutes
 
-# Optional: path to a Netscape-format cookies.txt exported from a logged-in
-# browser session. Most X/Twitter video content requires being logged in,
-# so this is effectively required for the X source to work. Not needed for
-# most public YouTube videos.
-COOKIES_FILE = Path(__file__).resolve().parent / "cookies.txt"
+# Cookies file path — checked in order:
+# 1. Render's secret file location (/etc/secrets/cookies.txt)
+# 2. Local path next to main.py (backend/cookies.txt) for local dev
+RENDER_COOKIES = Path("/etc/secrets/cookies.txt")
+LOCAL_COOKIES = Path(__file__).resolve().parent / "cookies.txt"
+COOKIES_FILE = RENDER_COOKIES if RENDER_COOKIES.exists() else LOCAL_COOKIES
+
+# Log which cookies file (if any) was found — visible in Render/host logs
+# so we can confirm the secret file is actually being picked up.
+if RENDER_COOKIES.exists():
+    print(f"  cookies: found at Render secret path {RENDER_COOKIES}", file=sys.stderr)
+elif LOCAL_COOKIES.exists():
+    print(f"  cookies: found at local path {LOCAL_COOKIES}", file=sys.stderr)
+else:
+    print(f"  cookies: NOT FOUND — YouTube/X may hit bot-detection wall", file=sys.stderr)
 
 YOUTUBE_URL_RE = re.compile(
     r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/|m\.youtube\.com/watch\?v=)[\w\-]+",
