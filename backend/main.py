@@ -198,9 +198,8 @@ def video_info(payload: VideoInfoRequest):
         "--dump-json",
         "--no-playlist",
         "--skip-download",
-        # Explicitly tell yt-dlp to use deno for YouTube's n-challenge JS solver.
-        # Without this, it may not find the runtime even if deno is on PATH.
         "--extractor-args", "youtube:player_client=web",
+        "--remote-components", "ejs:github",
     ]
     cmd += _cookie_args(source)
     cmd.append(payload.url)
@@ -298,6 +297,7 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str):
         "--download-sections", section,
         "--force-keyframes-at-cuts",
         "--extractor-args", "youtube:player_client=web",
+        "--remote-components", "ejs:github",
         "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b",
         "--merge-output-format", "mp4",
         "--newline",
