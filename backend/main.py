@@ -133,12 +133,27 @@ def _cookie_args(source: Optional[str]) -> list[str]:
     """X/Twitter video almost always requires an authenticated session.
     YouTube usually doesn't, but we'll happily use the same cookies file
     for YouTube too if present (helps with age-restricted content).
-    --no-update-on-each-download stops yt-dlp trying to write updated
-    session tokens back to the cookies file — necessary on Render where
-    /etc/secrets/ is a read-only filesystem."""
-    if COOKIES_FILE.exists():
-        return ["--cookies", str(COOKIES_FILE), "--no-update-on-each-download"]
-    return []
+
+    Render's /etc/secrets/ is read-only, but yt-dlp tries to write updated
+    session tokens back to the cookies file after each use. To avoid the
+    OSError, we copy the file to /tmp (always writable) on first use and
+    point yt-dlp at that copy instead."""
+    if not COOKIES_FILE.exists():
+        return []
+
+    # Use a writable copy in /tmp so yt-dlp can update it without hitting
+    # the read-only filesystem error on Render's secrets mount.
+    writable_copy = Path("/tmp/cookies_working.txt")
+    try:
+        if not writable_copy.exists() or \
+                writable_copy.stat().st_mtime < COOKIES_FILE.stat().st_mtime:
+            import shutil
+            shutil.copy2(str(COOKIES_FILE), str(writable_copy))
+    except Exception as e:
+        print(f"  [cookies] could not copy to /tmp, using original: {e}", file=sys.stderr)
+        return ["--cookies", str(COOKIES_FILE)]
+
+    return ["--cookies", str(writable_copy)]
 
 
 # ---------------------------------------------------------------------------
