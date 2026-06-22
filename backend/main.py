@@ -44,19 +44,29 @@ DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 CLIP_TTL_SECONDS = 60 * 30  # 30 minutes
 
 # Cookies file path — checked in order:
-# 1. Render's secret file location (/etc/secrets/cookies.txt)
-# 2. Local path next to main.py (backend/cookies.txt) for local dev
+# 1. COOKIES_CONTENT env var (Railway) — write contents to /tmp and use that
+# 2. Render's secret file location (/etc/secrets/cookies.txt)
+# 3. Local path next to main.py (backend/cookies.txt) for local dev
 RENDER_COOKIES = Path("/etc/secrets/cookies.txt")
 LOCAL_COOKIES = Path(__file__).resolve().parent / "cookies.txt"
-COOKIES_FILE = RENDER_COOKIES if RENDER_COOKIES.exists() else LOCAL_COOKIES
+ENV_COOKIES = Path("/tmp/cookies_env.txt")
 
-# Log which cookies file (if any) was found — visible in Render/host logs
-# so we can confirm the secret file is actually being picked up.
-if RENDER_COOKIES.exists():
+_cookies_content = os.environ.get("COOKIES_CONTENT", "").strip()
+print(f"  cookies: COOKIES_CONTENT env var length = {len(_cookies_content)} chars", file=sys.stderr)
+if _cookies_content:
+    # Railway: write env var content to a writable temp path
+    ENV_COOKIES.write_text(_cookies_content)
+    COOKIES_FILE = ENV_COOKIES
+    print(f"  cookies: loaded from COOKIES_CONTENT env var → {ENV_COOKIES}", file=sys.stderr)
+    print(f"  cookies: first line = {_cookies_content.splitlines()[0][:60]}", file=sys.stderr)
+elif RENDER_COOKIES.exists():
+    COOKIES_FILE = RENDER_COOKIES
     print(f"  cookies: found at Render secret path {RENDER_COOKIES}", file=sys.stderr)
 elif LOCAL_COOKIES.exists():
+    COOKIES_FILE = LOCAL_COOKIES
     print(f"  cookies: found at local path {LOCAL_COOKIES}", file=sys.stderr)
 else:
+    COOKIES_FILE = LOCAL_COOKIES  # won't exist, _cookie_args handles gracefully
     print(f"  cookies: NOT FOUND — YouTube/X may hit bot-detection wall", file=sys.stderr)
 
 YOUTUBE_URL_RE = re.compile(
@@ -130,30 +140,26 @@ def seconds_to_hhmmss(total_seconds: float) -> str:
 
 
 def _cookie_args(source: Optional[str]) -> list[str]:
-    """X/Twitter video almost always requires an authenticated session.
-    YouTube usually doesn't, but we'll happily use the same cookies file
-    for YouTube too if present (helps with age-restricted content).
-
-    Render's /etc/secrets/ is read-only, but yt-dlp tries to write updated
-    session tokens back to the cookies file after each use. To avoid the
-    OSError, we copy the file to /tmp (always writable) on first use and
-    point yt-dlp at that copy instead."""
+    """Returns yt-dlp cookie args if a cookies file is available.
+    The file is always writable (either /tmp/cookies_env.txt from env var,
+    /tmp/cookies_working.txt copied from Render secrets, or local file)
+    so yt-dlp can update session tokens without hitting read-only errors."""
     if not COOKIES_FILE.exists():
         return []
 
-    # Use a writable copy in /tmp so yt-dlp can update it without hitting
-    # the read-only filesystem error on Render's secrets mount.
-    writable_copy = Path("/tmp/cookies_working.txt")
-    try:
-        if not writable_copy.exists() or \
-                writable_copy.stat().st_mtime < COOKIES_FILE.stat().st_mtime:
-            import shutil
-            shutil.copy2(str(COOKIES_FILE), str(writable_copy))
-    except Exception as e:
-        print(f"  [cookies] could not copy to /tmp, using original: {e}", file=sys.stderr)
-        return ["--cookies", str(COOKIES_FILE)]
+    # For Render's read-only /etc/secrets path, copy to /tmp first.
+    if str(COOKIES_FILE).startswith("/etc/secrets"):
+        writable_copy = Path("/tmp/cookies_working.txt")
+        try:
+            if not writable_copy.exists() or \
+                    writable_copy.stat().st_mtime < COOKIES_FILE.stat().st_mtime:
+                import shutil
+                shutil.copy2(str(COOKIES_FILE), str(writable_copy))
+            return ["--cookies", str(writable_copy)]
+        except Exception as e:
+            print(f"  [cookies] copy to /tmp failed: {e}", file=sys.stderr)
 
-    return ["--cookies", str(writable_copy)]
+    return ["--cookies", str(COOKIES_FILE)]
 
 
 # ---------------------------------------------------------------------------
