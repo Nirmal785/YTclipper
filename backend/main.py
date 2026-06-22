@@ -190,6 +190,26 @@ threading.Thread(target=_cleanup_loop, daemon=True).start()
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.get("/api/thumbnail")
+async def proxy_thumbnail(url: str):
+    """Proxy thumbnail images from X/Twitter CDN to avoid CORS blocks
+    when the frontend is hosted on a different origin (e.g. Vercel)."""
+    import urllib.request
+    import urllib.error
+    from fastapi.responses import Response
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; yt-clipper/1.0)"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content_type = resp.headers.get("Content-Type", "image/jpeg")
+            data = resp.read()
+            return Response(content=data, media_type=content_type)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Thumbnail not available.")
+
+
 @app.get("/api/health")
 def health():
     return {"ok": True, "version": BACKEND_VERSION}
@@ -238,10 +258,17 @@ def video_info(payload: VideoInfoRequest):
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Unexpected response from yt-dlp.")
 
+    # Proxy the thumbnail URL through our own backend for X/Twitter sources
+    # — X's CDN blocks direct image loading from external origins like Vercel.
+    thumbnail = data.get("thumbnail")
+    if thumbnail and source == "x":
+        import urllib.parse
+        thumbnail = f"/api/thumbnail?url={urllib.parse.quote(thumbnail)}"
+
     return {
         "title": data.get("title"),
-        "duration": data.get("duration"),  # seconds
-        "thumbnail": data.get("thumbnail"),
+        "duration": data.get("duration"),
+        "thumbnail": thumbnail,
         "uploader": data.get("uploader"),
         "source": source,
     }
