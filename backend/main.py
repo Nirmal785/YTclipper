@@ -124,6 +124,7 @@ class ClipRequest(BaseModel):
     url: str
     start: float  # seconds
     end: float    # seconds
+    quality: str = "1080"  # "best", "1080", "720", "480", "360"
 
     @field_validator("url")
     @classmethod
@@ -131,6 +132,13 @@ class ClipRequest(BaseModel):
         if not detect_source(v):
             raise ValueError("That doesn't look like a YouTube or X (Twitter) video URL.")
         return v.strip()
+
+    @field_validator("quality")
+    @classmethod
+    def validate_quality(cls, v: str) -> str:
+        if v not in ("best", "1080", "720", "480", "360"):
+            return "1080"
+        return v
 
 
 def seconds_to_hhmmss(total_seconds: float) -> str:
@@ -192,21 +200,24 @@ threading.Thread(target=_cleanup_loop, daemon=True).start()
 
 @app.get("/api/thumbnail")
 async def proxy_thumbnail(url: str):
-    """Proxy thumbnail images from X/Twitter CDN to avoid CORS blocks
-    when the frontend is hosted on a different origin (e.g. Vercel)."""
+    """Proxy thumbnail images through backend to avoid CORS blocks."""
     import urllib.request
     import urllib.error
     from fastapi.responses import Response
     try:
         req = urllib.request.Request(
             url,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; yt-clipper/1.0)"}
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://twitter.com/",
+            }
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             content_type = resp.headers.get("Content-Type", "image/jpeg")
             data = resp.read()
             return Response(content=data, media_type=content_type)
-    except Exception:
+    except Exception as e:
+        print(f"[thumbnail proxy] failed for {url[:80]}: {e}", file=sys.stderr)
         raise HTTPException(status_code=404, detail="Thumbnail not available.")
 
 
@@ -258,12 +269,9 @@ def video_info(payload: VideoInfoRequest):
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Unexpected response from yt-dlp.")
 
-    # Proxy the thumbnail URL through our own backend for X/Twitter sources
-    # — X's CDN blocks direct image loading from external origins like Vercel.
+    # Return the raw thumbnail URL — the frontend handles broken images
+    # gracefully with a placeholder if the CDN blocks cross-origin loading.
     thumbnail = data.get("thumbnail")
-    if thumbnail and source == "x":
-        import urllib.parse
-        thumbnail = f"/api/thumbnail?url={urllib.parse.quote(thumbnail)}"
 
     return {
         "title": data.get("title"),
@@ -298,7 +306,7 @@ def create_clip(payload: ClipRequest):
 
     thread = threading.Thread(
         target=_run_clip_job,
-        args=(job_id, payload.url, payload.start, payload.end, source),
+        args=(job_id, payload.url, payload.start, payload.end, source, payload.quality),
         daemon=True,
     )
     thread.start()
@@ -321,9 +329,18 @@ FRAGMENT_TEMPLATE = "FR|%(progress.fragment_index)s|%(progress.fragment_count)s"
 POSTPROC_TEMPLATE = "postprocess:PP|%(progress._percent_str)s"
 
 
-def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str):
+def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, quality: str = "1080"):
     out_template = str(DOWNLOAD_DIR / f"{job_id}.%(ext)s")
     section = f"*{seconds_to_hhmmss(start)}-{seconds_to_hhmmss(end)}"
+
+    # Build format selector based on requested quality
+    if quality == "best":
+        fmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b"
+    elif quality in ("1080", "720", "480", "360"):
+        h = quality
+        fmt = f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]/b[height<={h}][ext=mp4]/b[height<={h}]"
+    else:
+        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b"
 
     cmd = ["yt-dlp", "--no-playlist"]
     cmd += _cookie_args(source)
@@ -332,7 +349,7 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str):
         "--force-keyframes-at-cuts",
         "--extractor-args", "youtube:player_client=web",
         "--remote-components", "ejs:github",
-        "-f", "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b",
+        "-f", fmt,
         "--merge-output-format", "mp4",
         "--newline",
         "--progress-template", PROGRESS_TEMPLATE,
