@@ -333,14 +333,22 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, 
     out_template = str(DOWNLOAD_DIR / f"{job_id}.%(ext)s")
     section = f"*{seconds_to_hhmmss(start)}-{seconds_to_hhmmss(end)}"
 
-    # Build format selector based on requested quality
+    # Build format selector based on requested quality.
+    # The fallback chain ensures we always get something even if the
+    # exact quality isn't available for this source (common with X/Twitter).
     if quality == "best":
-        fmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b"
+        fmt = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
     elif quality in ("1080", "720", "480", "360"):
         h = quality
-        fmt = f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]/b[height<={h}][ext=mp4]/b[height<={h}]"
+        fmt = (
+            f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]"
+            f"/bv*[height<={h}]+ba"
+            f"/b[height<={h}]"
+            f"/bv*[ext=mp4]+ba[ext=m4a]"
+            f"/b[ext=mp4]/b"
+        )
     else:
-        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/b"
+        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
 
     cmd = ["yt-dlp", "--no-playlist"]
     cmd += _cookie_args(source)
