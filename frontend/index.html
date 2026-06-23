@@ -1,1141 +1,1078 @@
+
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Clipreel — pull a clip, not the whole tape</title>
-    <style>
-      :root {
-        --bg: #121214;
-        --panel: #19191c;
-        --panel-raised: #1f1f23;
-        --line: #2c2c31;
-        --text: #ededef;
-        --text-dim: #9a9aa2;
-        --text-faint: #5e5e66;
-        --accent: #ff5a36;
-        --accent-dim: #7a2f1f;
-        --ok: #3ddc97;
-        --err: #ff5a5a;
-        --mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
-        --sans:
-          "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clipreel — pull a clip, not the whole tape</title>
+<style>
+  :root {
+    --bg: #121214;
+    --panel: #19191c;
+    --panel-raised: #1f1f23;
+    --line: #2c2c31;
+    --text: #ededef;
+    --text-dim: #9a9aa2;
+    --text-faint: #5e5e66;
+    --accent: #ff5a36;
+    --accent-dim: #7a2f1f;
+    --ok: #3ddc97;
+    --err: #ff5a5a;
+    --mono: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
 
-      * {
-        box-sizing: border-box;
-      }
+  * { box-sizing: border-box; }
 
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font-family: var(--sans);
-        min-height: 100vh;
-        background-image: radial-gradient(
-          circle at 1px 1px,
-          rgba(255, 255, 255, 0.035) 1px,
-          transparent 0
-        );
-        background-size: 28px 28px;
-      }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.035) 1px, transparent 0);
+    background-size: 28px 28px;
+  }
 
-      .wrap {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 56px 24px 100px;
-      }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+  }
 
-      header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 48px;
-        border-bottom: 1px solid var(--line);
-        padding-bottom: 20px;
-      }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 20px;
+  }
 
-      .logo {
-        font-family: var(--mono);
-        font-size: 15px;
-        letter-spacing: 0.04em;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .logo .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 8px var(--accent);
-      }
-      .tagline {
-        font-size: 12px;
-        color: var(--text-faint);
-        font-family: var(--mono);
-      }
+  .logo {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .tagline {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+  }
 
-      h1 {
-        font-size: 30px;
-        font-weight: 650;
-        letter-spacing: -0.02em;
-        margin: 0 0 10px;
-        line-height: 1.15;
-      }
-      h1 span {
-        color: var(--accent);
-      }
+  h1 {
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+    line-height: 1.15;
+  }
+  h1 span { color: var(--accent); }
 
-      .sub {
-        color: var(--text-dim);
-        font-size: 15px;
-        line-height: 1.6;
-        margin: 0 0 36px;
-        max-width: 54ch;
-      }
+  .sub {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 36px;
+    max-width: 54ch;
+  }
 
-      .panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 24px;
-        margin-bottom: 20px;
-      }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
 
-      label {
-        display: block;
-        font-family: var(--mono);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--text-faint);
-        margin-bottom: 8px;
-      }
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
 
-      input[type="text"],
-      input[type="number"] {
-        width: 100%;
-        background: var(--panel-raised);
-        border: 1px solid var(--line);
-        color: var(--text);
-        font-family: var(--sans);
-        font-size: 14px;
-        padding: 12px 14px;
-        border-radius: 7px;
-        outline: none;
-        transition: border-color 0.15s ease;
-      }
-      input[type="text"]:focus,
-      input[type="number"]:focus {
-        border-color: var(--accent);
-      }
-      input::placeholder {
-        color: var(--text-faint);
-      }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 7px;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+  input::placeholder { color: var(--text-faint); }
 
-      .source-toggle {
-        display: flex;
-        gap: 8px;
-      }
-      .source-btn {
-        flex: 1;
-        background: var(--panel-raised);
-        border: 1px solid var(--line);
-        color: var(--text-dim);
-        font-family: var(--sans);
-        font-weight: 600;
-        font-size: 13px;
-        padding: 10px 14px;
-        border-radius: 7px;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .source-btn:hover {
-        border-color: var(--text-dim);
-        color: var(--text);
-      }
-      .source-btn.active {
-        background: var(--accent-dim);
-        border-color: var(--accent);
-        color: var(--text);
-      }
+  .source-toggle {
+    display: flex;
+    gap: 8px;
+  }
+  .source-btn {
+    flex: 1;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .source-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .source-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--text);
+  }
 
-      .x-note {
-        display: none;
-        font-size: 12px;
-        color: var(--text-faint);
-        margin-top: 10px;
-        line-height: 1.5;
-      }
-      .x-note.show {
-        display: block;
-      }
-      .x-note a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      .x-note a:hover {
-        text-decoration: underline;
-      }
+  .x-note {
+    display: none;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .x-note.show { display: block; }
+  .x-note a { color: var(--accent); text-decoration: none; }
+  .x-note a:hover { text-decoration: underline; }
 
-      .url-row {
-        display: flex;
-        gap: 10px;
-      }
-      .url-row input {
-        flex: 1;
-      }
+  .url-row {
+    display: flex;
+    gap: 10px;
+  }
+  .url-row input { flex: 1; }
 
-      button {
-        font-family: var(--sans);
-        font-weight: 600;
-        font-size: 14px;
-        border: none;
-        border-radius: 7px;
-        padding: 12px 20px;
-        cursor: pointer;
-        transition:
-          transform 0.08s ease,
-          background 0.15s ease,
-          opacity 0.15s ease;
-      }
-      button:active {
-        transform: scale(0.97);
-      }
-      button:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-      }
+  button {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 7px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+  }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
 
-      .btn-fetch {
-        background: var(--panel-raised);
-        color: var(--text);
-        border: 1px solid var(--line);
-        white-space: nowrap;
-      }
-      .btn-fetch:hover:not(:disabled) {
-        border-color: var(--text-dim);
-      }
+  .btn-fetch {
+    background: var(--panel-raised);
+    color: var(--text);
+    border: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .btn-fetch:hover:not(:disabled) { border-color: var(--text-dim); }
 
-      .btn-primary {
-        background: var(--accent);
-        color: #1a0a05;
-        width: 100%;
-        padding: 15px;
-        font-size: 15px;
-      }
-      .btn-primary:hover:not(:disabled) {
-        background: #ff6b4a;
-      }
+  .btn-primary {
+    background: var(--accent);
+    color: #1a0a05;
+    width: 100%;
+    padding: 15px;
+    font-size: 15px;
+  }
+  .btn-primary:hover:not(:disabled) { background: #ff6b4a; }
 
-      /* Video info card */
-      .video-card {
-        display: none;
-        gap: 16px;
-        margin-top: 18px;
-        padding-top: 18px;
-        border-top: 1px solid var(--line);
-      }
-      .video-card.show {
-        display: flex;
-      }
-      .video-card img {
-        width: 140px;
-        height: 79px;
-        object-fit: cover;
-        border-radius: 6px;
-        border: 1px solid var(--line);
-        flex-shrink: 0;
-        background: #000;
-      }
-      .video-meta {
-        min-width: 0;
-      }
-      .video-meta .title {
-        font-size: 14px;
-        font-weight: 600;
-        line-height: 1.4;
-        margin-bottom: 4px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-      }
-      .video-meta .uploader {
-        font-size: 12px;
-        color: var(--text-dim);
-        margin-bottom: 6px;
-      }
-      .video-meta .duration {
-        font-family: var(--mono);
-        font-size: 11px;
-        color: var(--text-faint);
-        background: var(--panel-raised);
-        display: inline-block;
-        padding: 3px 8px;
-        border-radius: 4px;
-      }
+  /* Video info card */
+  .video-card {
+    display: none;
+    gap: 16px;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .video-card.show { display: flex; }
+  .video-card img {
+    width: 140px;
+    height: 79px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    flex-shrink: 0;
+    background: #000;
+  }
+  .video-card .no-thumb {
+    width: 140px;
+    height: 79px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    flex-shrink: 0;
+    background: var(--panel-raised);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+  .video-card .no-thumb::after {
+    content: "🎬";
+  }
+  .video-meta { min-width: 0; }
+  .video-meta .title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .video-meta .uploader {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .video-meta .duration {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    background: var(--panel-raised);
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
 
-      /* Timeline scrubber */
-      .timeline-section {
-        margin-top: 22px;
-      }
+  /* Timeline scrubber */
+  .timeline-section { margin-top: 22px; }
 
-      .timeline.hidden {
-        display: none;
-      }
+  .timeline.hidden { display: none; }
 
-      .duration-note {
-        display: none;
-        font-size: 12px;
-        color: var(--text-faint);
-        line-height: 1.6;
-        background: var(--panel-raised);
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        padding: 10px 12px;
-        margin-bottom: 16px;
-      }
-      .duration-note.show {
-        display: block;
-      }
+  .duration-note {
+    display: none;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.6;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+  }
+  .duration-note.show { display: block; }
 
-      .timeline {
-        position: relative;
-        height: 44px;
-        background: var(--panel-raised);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        margin-bottom: 18px;
-        overflow: hidden;
-      }
-      .timeline .track {
-        position: absolute;
-        inset: 0;
-        background-image: repeating-linear-gradient(
-          90deg,
-          transparent,
-          transparent 9px,
-          rgba(255, 255, 255, 0.04) 9px,
-          rgba(255, 255, 255, 0.04) 10px
-        );
-      }
-      .timeline .selection {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        background: linear-gradient(
-          180deg,
-          var(--accent-dim),
-          rgba(255, 90, 54, 0.18)
-        );
-        border-left: 2px solid var(--accent);
-        border-right: 2px solid var(--accent);
-      }
-      .timeline .handle {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 28px;
-        margin-left: -14px;
-        cursor: ew-resize;
-        z-index: 2;
-      }
-      .timeline .handle::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 4px;
-        height: 20px;
-        background: var(--accent);
-        border-radius: 2px;
-      }
+  .timeline {
+    position: relative;
+    height: 44px;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .timeline .track {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      90deg,
+      transparent, transparent 9px,
+      rgba(255,255,255,0.04) 9px, rgba(255,255,255,0.04) 10px
+    );
+  }
+  .timeline .selection {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, var(--accent-dim), rgba(255,90,54,0.18));
+    border-left: 2px solid var(--accent);
+    border-right: 2px solid var(--accent);
+  }
+  .timeline .handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 28px;
+    margin-left: -14px;
+    cursor: ew-resize;
+    z-index: 2;
+  }
+  .timeline .handle::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
 
-      .time-inputs {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        gap: 14px;
-        align-items: end;
-      }
-      .time-inputs .arrow {
-        color: var(--text-faint);
-        font-family: var(--mono);
-        padding-bottom: 13px;
-        font-size: 13px;
-      }
-      .time-field input {
-        font-family: var(--mono);
-        font-size: 18px;
-        letter-spacing: 0.03em;
-        text-align: center;
-      }
+  .time-inputs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 14px;
+    align-items: end;
+  }
+  .time-inputs .arrow {
+    color: var(--text-faint);
+    font-family: var(--mono);
+    padding-bottom: 13px;
+    font-size: 13px;
+  }
+  .time-field input {
+    font-family: var(--mono);
+    font-size: 18px;
+    letter-spacing: 0.03em;
+    text-align: center;
+  }
 
-      .clip-len {
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--text-faint);
-        margin-top: 12px;
-        text-align: center;
-      }
-      .clip-len .val {
-        color: var(--accent);
-        font-weight: 600;
-      }
+  .clip-len {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-top: 12px;
+    text-align: center;
+  }
+  .clip-len .val { color: var(--accent); font-weight: 600; }
 
-      .status {
-        margin-top: 16px;
-        font-family: var(--mono);
-        font-size: 13px;
-        text-align: center;
-        color: var(--text-dim);
-        min-height: 18px;
-      }
-      .status.err {
-        color: var(--err);
-      }
-      .status.ok {
-        color: var(--ok);
-      }
+  .status {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align: center;
+    color: var(--text-dim);
+    min-height: 18px;
+  }
+  .status.err { color: var(--err); }
+  .status.ok { color: var(--ok); }
 
-      /* Processing panel */
-      .processing {
-        display: none;
-        margin-top: 20px;
-        padding: 18px;
-        background: var(--panel-raised);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-      }
-      .processing.show {
-        display: block;
-      }
+  .quality-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .quality-row label {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-faint);
+    margin: 0;
+    white-space: nowrap;
+  }
+  .quality-row select {
+    flex: 1;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+  }
+  .quality-row select:focus { border-color: var(--accent); }
+  .processing {
+    display: none;
+    margin-top: 20px;
+    padding: 18px;
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .processing.show { display: block; }
 
-      .processing-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 14px;
-      }
-      .processing-label {
-        font-size: 13px;
-        color: var(--text);
-        font-weight: 600;
-      }
-      .processing-label::after {
-        content: "";
-        display: inline-block;
-        width: 4px;
-      }
-      .processing-time {
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--text-faint);
-        font-variant-numeric: tabular-nums;
-      }
+  .processing-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .processing-label {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .processing-label::after {
+    content: "";
+    display: inline-block;
+    width: 4px;
+  }
+  .processing-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
 
-      .proc-track {
-        position: relative;
-        height: 8px;
-        background: var(--bg);
-        border-radius: 5px;
-        overflow: hidden;
-        border: 1px solid var(--line);
-      }
-      .proc-fill {
-        position: absolute;
-        inset: 0;
-        width: 0%;
-        background: linear-gradient(90deg, var(--accent-dim), var(--accent));
-        border-radius: 5px;
-        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      /* Animated scanline glint that sweeps across the filled portion
+  .proc-track {
+    position: relative;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .proc-fill {
+    position: absolute;
+    inset: 0;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    border-radius: 5px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Animated scanline glint that sweeps across the filled portion
      continuously, so the bar always reads as "alive" even during
      stretches with no new percentage data (e.g. ffmpeg merge step,
      or sources that report progress in sparse jumps). */
-      .proc-scan {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 60px;
-        background: linear-gradient(
-          90deg,
-          transparent,
-          rgba(255, 255, 255, 0.35),
-          transparent
-        );
-        animation: scan 1.6s linear infinite;
-        mix-blend-mode: overlay;
-      }
-      @keyframes scan {
-        0% {
-          left: -60px;
-        }
-        100% {
-          left: 100%;
-        }
-      }
+  .proc-scan {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(255,255,255,0.35),
+      transparent
+    );
+    animation: scan 1.6s linear infinite;
+    mix-blend-mode: overlay;
+  }
+  @keyframes scan {
+    0%   { left: -60px; }
+    100% { left: 100%; }
+  }
 
-      .proc-foot {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 12px;
-      }
-      .proc-pct {
-        font-family: var(--mono);
-        font-size: 20px;
-        font-weight: 600;
-        color: var(--accent);
-        font-variant-numeric: tabular-nums;
-        min-width: 56px;
-      }
+  .proc-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .proc-pct {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    min-width: 56px;
+  }
 
-      .proc-steps {
-        display: flex;
-        gap: 16px;
-      }
-      .proc-step {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-family: var(--mono);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-faint);
-        transition: color 0.3s ease;
-      }
-      .proc-step .step-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--line);
-        transition:
-          background 0.3s ease,
-          box-shadow 0.3s ease;
-      }
-      .proc-step.active {
-        color: var(--text);
-      }
-      .proc-step.active .step-dot {
-        background: var(--accent);
-        box-shadow: 0 0 6px var(--accent);
-        animation: pulse-dot 1.2s ease-in-out infinite;
-      }
-      .proc-step.done {
-        color: var(--ok);
-      }
-      .proc-step.done .step-dot {
-        background: var(--ok);
-        box-shadow: none;
-        animation: none;
-      }
-      @keyframes pulse-dot {
-        0%,
-        100% {
-          opacity: 1;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 0.5;
-          transform: scale(0.8);
-        }
-      }
+  .proc-steps {
+    display: flex;
+    gap: 16px;
+  }
+  .proc-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    transition: color 0.3s ease;
+  }
+  .proc-step .step-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  .proc-step.active {
+    color: var(--text);
+  }
+  .proc-step.active .step-dot {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: pulse-dot 1.2s ease-in-out infinite;
+  }
+  .proc-step.done {
+    color: var(--ok);
+  }
+  .proc-step.done .step-dot {
+    background: var(--ok);
+    box-shadow: none;
+    animation: none;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
 
-      footer {
-        margin-top: 40px;
-        font-size: 12px;
-        color: var(--text-faint);
-        line-height: 1.7;
-        border-top: 1px solid var(--line);
-        padding-top: 20px;
-      }
-      footer code {
-        font-family: var(--mono);
-        background: var(--panel-raised);
-        padding: 1px 5px;
-        border-radius: 3px;
-      }
+  footer {
+    margin-top: 40px;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.7;
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+  footer code {
+    font-family: var(--mono);
+    background: var(--panel-raised);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
 
-      @media (prefers-reduced-motion: reduce) {
-        * {
-          animation: none !important;
-          transition: none !important;
-        }
-      }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
 
-      @media (max-width: 520px) {
-        .wrap {
-          padding: 32px 16px 80px;
-        }
-        h1 {
-          font-size: 24px;
-        }
-        .url-row {
-          flex-direction: column;
-        }
-        .video-card img {
-          width: 100px;
-          height: 56px;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <header>
-        <div class="logo"><span class="dot"></span>clipreel</div>
-        <div class="tagline">local instance</div>
-      </header>
+  @media (max-width: 520px) {
+    .wrap { padding: 32px 16px 80px; }
+    h1 { font-size: 24px; }
+    .url-row { flex-direction: column; }
+    .video-card img { width: 100px; height: 56px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="dot"></span>clipreel</div>
+      <div class="tagline">local instance</div>
+    </header>
 
-      <h1>Take the <span>5 minutes</span>.<br />Skip the rest of the tape.</h1>
-      <p class="sub">
-        Paste a YouTube or X (Twitter) video link, mark the in and out points,
-        and only that slice gets pulled down — the rest of the source is never
-        downloaded.
-      </p>
+    <h1>Take the <span>5 minutes</span>.<br>Skip the rest of the tape.</h1>
+    <p class="sub">Paste a YouTube or X (Twitter) video link, mark the in and out points, and only that slice gets pulled down — the rest of the source is never downloaded.</p>
 
-      <div class="panel">
-        <label>Source</label>
-        <div class="source-toggle" id="sourceToggle">
-          <button class="source-btn active" data-source="youtube" type="button">
-            YouTube
-          </button>
-          <button class="source-btn" data-source="x" type="button">
-            X / Twitter
-          </button>
-        </div>
+    <div class="panel">
+      <label>Source</label>
+      <div class="source-toggle" id="sourceToggle">
+        <button class="source-btn active" data-source="youtube" type="button">YouTube</button>
+        <button class="source-btn" data-source="x" type="button">X / Twitter</button>
+      </div>
 
-        <label for="url" style="margin-top: 18px">Video URL</label>
-        <div class="url-row">
-          <input
-            type="text"
-            id="url"
-            placeholder="https://www.youtube.com/watch?v=..."
-          />
-          <button class="btn-fetch" id="fetchBtn">Load video</button>
-        </div>
-        <div class="x-note" id="xNote">
-          X video usually needs a logged-in session.
-          <a href="#" id="xNoteLink">How to set that up →</a>
-        </div>
+      <label for="url" style="margin-top:18px;">Video URL</label>
+      <div class="url-row">
+        <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." />
+        <button class="btn-fetch" id="fetchBtn">Load video</button>
+      </div>
+      <div class="x-note" id="xNote">X video usually needs a logged-in session. <a href="#" id="xNoteLink">How to set that up →</a></div>
 
-        <div class="video-card" id="videoCard">
+      <div class="video-card" id="videoCard">
+        <div id="thumbWrap">
           <img id="thumb" src="" alt="" />
-          <div class="video-meta">
-            <div class="title" id="vidTitle"></div>
-            <div class="uploader" id="vidUploader"></div>
-            <div class="duration" id="vidDuration"></div>
-          </div>
+        </div>
+        <div class="video-meta">
+          <div class="title" id="vidTitle"></div>
+          <div class="uploader" id="vidUploader"></div>
+          <div class="duration" id="vidDuration"></div>
         </div>
       </div>
-
-      <div
-        class="panel timeline-section"
-        id="timelinePanel"
-        style="display: none"
-      >
-        <label>Select range</label>
-        <div class="duration-note" id="durationNote">
-          This source doesn't report a fixed duration (common for live
-          broadcasts/replays), so the visual timeline is unavailable — type your
-          in/out timecodes directly below instead.
-        </div>
-        <div class="timeline" id="timeline">
-          <div class="track"></div>
-          <div class="selection" id="selection"></div>
-          <div class="handle" id="handleStart"></div>
-          <div class="handle" id="handleEnd"></div>
-        </div>
-
-        <div class="time-inputs">
-          <div class="time-field">
-            <label for="startInput">In point</label>
-            <input type="text" id="startInput" value="00:00:00" />
-          </div>
-          <div class="arrow">→</div>
-          <div class="time-field">
-            <label for="endInput">Out point</label>
-            <input type="text" id="endInput" value="00:00:30" />
-          </div>
-        </div>
-
-        <div class="clip-len">
-          clip length: <span class="val" id="clipLen">00:00:30</span>
-        </div>
-
-        <button class="btn-primary" id="downloadBtn" style="margin-top: 20px">
-          Download clip
-        </button>
-        <div class="status" id="status"></div>
-
-        <div class="processing" id="processing">
-          <div class="processing-head">
-            <div class="processing-label" id="processingLabel">
-              Pulling the range from the source
-            </div>
-            <div class="processing-time" id="processingTime">0:00</div>
-          </div>
-
-          <div class="proc-track">
-            <div class="proc-fill" id="procFill"></div>
-            <div class="proc-scan" id="procScan"></div>
-          </div>
-
-          <div class="proc-foot">
-            <div class="proc-pct" id="procPct">0%</div>
-            <div class="proc-steps" id="procSteps">
-              <div class="proc-step active" data-step="fetch">
-                <span class="step-dot"></span>fetch
-              </div>
-              <div class="proc-step" data-step="download">
-                <span class="step-dot"></span>download
-              </div>
-              <div class="proc-step" data-step="process">
-                <span class="step-dot"></span>trim &amp; merge
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <footer>
-        Runs entirely on this machine via <code>yt-dlp</code> +
-        <code>ffmpeg</code>. For personal use with content you have the right to
-        download — nothing here is uploaded or shared anywhere.
-      </footer>
     </div>
 
-    <script>
-      //const API = "https://ytclipper-irq2.onrender.com";
-      
-      const API = "https://ytclipper-production-369c.up.railway.app";
+    <div class="panel timeline-section" id="timelinePanel" style="display:none;">
+      <label>Select range</label>
+      <div class="duration-note" id="durationNote">
+        This source doesn't report a fixed duration (common for live broadcasts/replays), so the visual timeline is unavailable — type your in/out timecodes directly below instead.
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="track"></div>
+        <div class="selection" id="selection"></div>
+        <div class="handle" id="handleStart"></div>
+        <div class="handle" id="handleEnd"></div>
+      </div>
 
-      let currentSource = "youtube";
-      const sourceToggle = document.getElementById("sourceToggle");
-      const xNote = document.getElementById("xNote");
-      const xNoteLink = document.getElementById("xNoteLink");
+      <div class="time-inputs">
+        <div class="time-field">
+          <label for="startInput">In point</label>
+          <input type="text" id="startInput" value="00:00:00" />
+        </div>
+        <div class="arrow">→</div>
+        <div class="time-field">
+          <label for="endInput">Out point</label>
+          <input type="text" id="endInput" value="00:00:30" />
+        </div>
+      </div>
 
-      const PLACEHOLDERS = {
-        youtube: "https://www.youtube.com/watch?v=...",
-        x: "https://x.com/i/broadcasts/... or https://x.com/user/status/...",
-      };
+      <div class="clip-len">clip length: <span class="val" id="clipLen">00:00:30</span></div>
 
-      sourceToggle.addEventListener("click", (e) => {
-        const btn = e.target.closest(".source-btn");
-        if (!btn) return;
-        if (btn.dataset.source === currentSource) return; // no-op if already selected
-        currentSource = btn.dataset.source;
-        document
-          .querySelectorAll(".source-btn")
-          .forEach((b) => b.classList.toggle("active", b === btn));
-        urlInput.placeholder = PLACEHOLDERS[currentSource];
-        xNote.classList.toggle("show", currentSource === "x");
-        resetVideoState();
-      });
+      <div class="quality-row">
+        <label for="qualitySelect">Quality</label>
+        <select id="qualitySelect">
+          <option value="best">Best available</option>
+          <option value="1080" selected>1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
+        </select>
+      </div>
 
-      xNoteLink.addEventListener("click", (e) => {
-        e.preventDefault();
-        alert(
-          "X video almost always requires being logged in.\n\n" +
-            "1. Install a browser extension like 'Get cookies.txt LOCALLY'\n" +
-            "2. Log into x.com in that browser\n" +
-            "3. Export cookies for x.com as cookies.txt\n" +
-            "4. Place that file at: backend/cookies.txt\n" +
-            "5. Restart the backend server\n\n" +
-            "Full steps are in the README.",
-        );
-      });
+      <button class="btn-primary" id="downloadBtn" style="margin-top:20px;">Download clip</button>
+      <div class="status" id="status"></div>
 
-      const urlInput = document.getElementById("url");
-      const fetchBtn = document.getElementById("fetchBtn");
-      const videoCard = document.getElementById("videoCard");
-      const thumb = document.getElementById("thumb");
-      const vidTitle = document.getElementById("vidTitle");
-      const vidUploader = document.getElementById("vidUploader");
-      const vidDuration = document.getElementById("vidDuration");
-      const durationNote = document.getElementById("durationNote");
-      const timelinePanel = document.getElementById("timelinePanel");
-      const timeline = document.getElementById("timeline");
-      const selection = document.getElementById("selection");
-      const handleStart = document.getElementById("handleStart");
-      const handleEnd = document.getElementById("handleEnd");
-      const startInput = document.getElementById("startInput");
-      const endInput = document.getElementById("endInput");
-      const clipLen = document.getElementById("clipLen");
-      const downloadBtn = document.getElementById("downloadBtn");
-      const statusEl = document.getElementById("status");
-      const processingEl = document.getElementById("processing");
-      const processingLabel = document.getElementById("processingLabel");
-      const processingTime = document.getElementById("processingTime");
-      const procFill = document.getElementById("procFill");
-      const procPct = document.getElementById("procPct");
-      const procSteps = document.querySelectorAll(".proc-step");
+      <div class="processing" id="processing">
+        <div class="processing-head">
+          <div class="processing-label" id="processingLabel">Pulling the range from the source</div>
+          <div class="processing-time" id="processingTime">0:00</div>
+        </div>
 
-      let videoDuration = 0;
-      let startSec = 0;
-      let endSec = 30;
-      let procTimerHandle = null;
-      let procStartTime = null;
-      let procCreepHandle = null;
+        <div class="proc-track">
+          <div class="proc-fill" id="procFill"></div>
+          <div class="proc-scan" id="procScan"></div>
+        </div>
 
-      function resetVideoState() {
-        urlInput.value = "";
-        videoCard.classList.remove("show");
-        timelinePanel.style.display = "none";
-        timeline.classList.remove("hidden");
-        durationNote.classList.remove("show");
-        thumb.src = "";
-        vidTitle.textContent = "";
-        vidUploader.textContent = "";
-        vidDuration.textContent = "";
-        setStatus("", "");
-        stopProcessingUI();
-        videoDuration = 0;
-        startSec = 0;
-        endSec = 30;
-        urlInput.focus();
-      }
+        <div class="proc-foot">
+          <div class="proc-pct" id="procPct">0%</div>
+          <div class="proc-steps" id="procSteps">
+            <div class="proc-step active" data-step="fetch">
+              <span class="step-dot"></span>fetch
+            </div>
+            <div class="proc-step" data-step="download">
+              <span class="step-dot"></span>download
+            </div>
+            <div class="proc-step" data-step="process">
+              <span class="step-dot"></span>trim &amp; merge
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      function fmtElapsed(totalSeconds) {
-        const m = Math.floor(totalSeconds / 60);
-        const s = Math.floor(totalSeconds % 60);
-        return `${m}:${String(s).padStart(2, "0")}`;
-      }
+    <footer>
+      Runs entirely on this machine via <code>yt-dlp</code> + <code>ffmpeg</code>. For personal use with content you have the right to download — nothing here is uploaded or shared anywhere.
+    </footer>
+  </div>
 
-      function setProcStep(stepName) {
-        // stepName: "fetch" | "download" | "process"
-        const order = ["fetch", "download", "process"];
-        const idx = order.indexOf(stepName);
-        procSteps.forEach((el) => {
-          const elIdx = order.indexOf(el.dataset.step);
-          el.classList.remove("active", "done");
-          if (elIdx < idx) el.classList.add("done");
-          else if (elIdx === idx) el.classList.add("active");
-        });
-      }
+<script>
+const API = "http://127.0.0.1:8000";
 
-      function setProcPercent(pct) {
-        pct = Math.max(0, Math.min(100, pct));
-        procFill.style.width = pct + "%";
-        procPct.textContent = Math.round(pct) + "%";
-      }
+let currentSource = "youtube";
+const sourceToggle = document.getElementById("sourceToggle");
+const xNote = document.getElementById("xNote");
+const xNoteLink = document.getElementById("xNoteLink");
 
-      let lastRealPct = 0;
+const PLACEHOLDERS = {
+  youtube: "https://www.youtube.com/watch?v=...",
+  x: "https://x.com/i/broadcasts/... or https://x.com/user/status/...",
+};
 
-      function startProcessingUI() {
-        processingEl.classList.add("show");
-        procStartTime = Date.now();
-        lastRealPct = 0;
-        setProcPercent(0);
-        setProcStep("fetch");
-        processingLabel.textContent = "Pulling the range from the source";
+sourceToggle.addEventListener("click", (e) => {
+  const btn = e.target.closest(".source-btn");
+  if (!btn) return;
+  if (btn.dataset.source === currentSource) return; // no-op if already selected
+  currentSource = btn.dataset.source;
+  document.querySelectorAll(".source-btn").forEach(b => b.classList.toggle("active", b === btn));
+  urlInput.placeholder = PLACEHOLDERS[currentSource];
+  xNote.classList.toggle("show", currentSource === "x");
+  resetVideoState();
+});
 
-        procTimerHandle = setInterval(() => {
-          const elapsed = (Date.now() - procStartTime) / 1000;
-          processingTime.textContent = fmtElapsed(elapsed);
-        }, 250);
+xNoteLink.addEventListener("click", (e) => {
+  e.preventDefault();
+  alert(
+    "X video almost always requires being logged in.\n\n" +
+    "1. Install a browser extension like 'Get cookies.txt LOCALLY'\n" +
+    "2. Log into x.com in that browser\n" +
+    "3. Export cookies for x.com as cookies.txt\n" +
+    "4. Place that file at: backend/cookies.txt\n" +
+    "5. Restart the backend server\n\n" +
+    "Full steps are in the README."
+  );
+});
 
-        // Gentle creep: if real progress hasn't moved in a while (sparse data
-        // from some sources), nudge the bar forward a hair every couple of
-        // seconds so it never looks frozen. Real updates always take priority
-        // and snap straight to the true value when they arrive.
-        procCreepHandle = setInterval(() => {
-          const ceiling = lastRealPct + 8; // never creep more than 8% ahead of last real signal
-          const current = parseFloat(procFill.style.width) || 0;
-          if (current < Math.min(ceiling, 92)) {
-            setProcPercent(current + 1);
-          }
-        }, 2200);
-      }
+const urlInput = document.getElementById("url");
+const fetchBtn = document.getElementById("fetchBtn");
+const videoCard = document.getElementById("videoCard");
+const thumb = document.getElementById("thumb");
+const vidTitle = document.getElementById("vidTitle");
+const vidUploader = document.getElementById("vidUploader");
+const vidDuration = document.getElementById("vidDuration");
+const durationNote = document.getElementById("durationNote");
+const timelinePanel = document.getElementById("timelinePanel");
+const timeline = document.getElementById("timeline");
+const selection = document.getElementById("selection");
+const handleStart = document.getElementById("handleStart");
+const handleEnd = document.getElementById("handleEnd");
+const startInput = document.getElementById("startInput");
+const endInput = document.getElementById("endInput");
+const clipLen = document.getElementById("clipLen");
+const downloadBtn = document.getElementById("downloadBtn");
+const qualitySelect = document.getElementById("qualitySelect");
+const statusEl = document.getElementById("status");
+const processingEl = document.getElementById("processing");
+const processingLabel = document.getElementById("processingLabel");
+const processingTime = document.getElementById("processingTime");
+const procFill = document.getElementById("procFill");
+const procPct = document.getElementById("procPct");
+const procSteps = document.querySelectorAll(".proc-step");
 
-      function updateProcessingFromStatus(data) {
-        const pct = data.percent ?? 0;
-        if (pct > lastRealPct) {
-          lastRealPct = pct;
-          setProcPercent(pct);
-        }
-        if (data.stage === "processing") {
-          setProcStep("process");
-          processingLabel.textContent = "Trimming and merging";
-        } else {
-          setProcStep("download");
-          processingLabel.textContent = "Pulling the range from the source";
-        }
-      }
+let videoDuration = 0;
+let startSec = 0;
+let endSec = 30;
+let procTimerHandle = null;
+let procStartTime = null;
+let procCreepHandle = null;
 
-      function stopProcessingUI() {
-        processingEl.classList.remove("show");
-        if (procTimerHandle) clearInterval(procTimerHandle);
-        if (procCreepHandle) clearInterval(procCreepHandle);
-        procTimerHandle = null;
-        procCreepHandle = null;
-        setProcPercent(0);
-        setProcStep("fetch");
-      }
+function resetVideoState() {
+  urlInput.value = "";
+  videoCard.classList.remove("show");
+  timelinePanel.style.display = "none";
+  timeline.classList.remove("hidden");
+  durationNote.classList.remove("show");
+  thumb.src = "";
+  thumb.style.display = "";
+  document.getElementById("thumbWrap").classList.remove("no-thumb");
+  vidTitle.textContent = "";
+  vidUploader.textContent = "";
+  vidDuration.textContent = "";
+  setStatus("", "");
+  stopProcessingUI();
+  videoDuration = 0;
+  startSec = 0;
+  endSec = 30;
+  urlInput.focus();
+}
 
-      function fmt(sec) {
-        sec = Math.max(0, Math.round(sec));
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = sec % 60;
-        return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
-      }
+function fmtElapsed(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
-      function parseTime(str) {
-        const parts = str.split(":").map((p) => parseInt(p, 10));
-        if (parts.some(isNaN)) return null;
-        if (parts.length === 3)
-          return parts[0] * 3600 + parts[1] * 60 + parts[2];
-        if (parts.length === 2) return parts[0] * 60 + parts[1];
-        if (parts.length === 1) return parts[0];
-        return null;
-      }
+function setProcStep(stepName) {
+  // stepName: "fetch" | "download" | "process"
+  const order = ["fetch", "download", "process"];
+  const idx = order.indexOf(stepName);
+  procSteps.forEach(el => {
+    const elIdx = order.indexOf(el.dataset.step);
+    el.classList.remove("active", "done");
+    if (elIdx < idx) el.classList.add("done");
+    else if (elIdx === idx) el.classList.add("active");
+  });
+}
 
-      function renderTimeline() {
-        if (!videoDuration) return;
-        const startPct = (startSec / videoDuration) * 100;
-        const endPct = (endSec / videoDuration) * 100;
-        selection.style.left = startPct + "%";
-        selection.style.width = endPct - startPct + "%";
-        handleStart.style.left = startPct + "%";
-        handleEnd.style.left = endPct + "%";
-        startInput.value = fmt(startSec);
-        endInput.value = fmt(endSec);
-        clipLen.textContent = fmt(endSec - startSec);
-      }
+function setProcPercent(pct) {
+  pct = Math.max(0, Math.min(100, pct));
+  procFill.style.width = pct + "%";
+  procPct.textContent = Math.round(pct) + "%";
+}
 
-      function setStatus(msg, type) {
-        statusEl.textContent = msg;
-        statusEl.className = "status" + (type ? " " + type : "");
-      }
+let lastRealPct = 0;
 
-      // ---- fetch video info ----
-      fetchBtn.addEventListener("click", loadVideo);
-      urlInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") loadVideo();
-      });
+function startProcessingUI() {
+  processingEl.classList.add("show");
+  procStartTime = Date.now();
+  lastRealPct = 0;
+  setProcPercent(0);
+  setProcStep("fetch");
+  processingLabel.textContent = "Pulling the range from the source";
 
-      async function loadVideo() {
-        const url = urlInput.value.trim();
-        if (!url) return;
-        fetchBtn.disabled = true;
-        fetchBtn.textContent = "Loading...";
-        setStatus("", "");
+  procTimerHandle = setInterval(() => {
+    const elapsed = (Date.now() - procStartTime) / 1000;
+    processingTime.textContent = fmtElapsed(elapsed);
+  }, 250);
 
-        try {
-          const res = await fetch(`${API}/api/video-info`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Could not load video.");
+  // Gentle creep: if real progress hasn't moved in a while (sparse data
+  // from some sources), nudge the bar forward a hair every couple of
+  // seconds so it never looks frozen. Real updates always take priority
+  // and snap straight to the true value when they arrive.
+  procCreepHandle = setInterval(() => {
+    const ceiling = lastRealPct + 8; // never creep more than 8% ahead of last real signal
+    const current = parseFloat(procFill.style.width) || 0;
+    if (current < Math.min(ceiling, 92)) {
+      setProcPercent(current + 1);
+    }
+  }, 2200);
+}
 
-          videoDuration = data.duration || 0;
-          vidTitle.textContent = data.title || "Untitled";
-          vidUploader.textContent = data.uploader || "";
-          thumb.src = data.thumbnail || "";
-          videoCard.classList.add("show");
-          timelinePanel.style.display = "block";
+function updateProcessingFromStatus(data) {
+  const pct = data.percent ?? 0;
+  if (pct > lastRealPct) {
+    lastRealPct = pct;
+    setProcPercent(pct);
+  }
+  if (data.stage === "processing") {
+    setProcStep("process");
+    processingLabel.textContent = "Trimming and merging";
+  } else {
+    setProcStep("download");
+    processingLabel.textContent = "Pulling the range from the source";
+  }
+}
 
-          if (videoDuration > 0) {
-            // Normal case: known duration, visual timeline works as usual.
-            vidDuration.textContent = fmt(videoDuration);
-            timeline.classList.remove("hidden");
-            durationNote.classList.remove("show");
-            startSec = 0;
-            endSec = Math.min(30, videoDuration);
-          } else {
-            // Broadcasts / live replays often don't report a duration (HLS
-            // streams, not fixed-length VOD files) — the percentage-based
-            // timeline has nothing to measure against, so fall back to plain
-            // start/end timecode entry instead of a visual scrubber.
-            vidDuration.textContent = "duration unknown (live/broadcast)";
-            timeline.classList.add("hidden");
-            durationNote.classList.add("show");
-            startSec = 0;
-            endSec = 30;
-            // Use a generous cap since we don't know the real length —
-            // the backend will simply stop at the source's actual end if
-            // your chosen end point runs past it.
-            videoDuration = 60 * 60 * 4; // 4hr soft ceiling just for input validation
-          }
+function stopProcessingUI() {
+  processingEl.classList.remove("show");
+  if (procTimerHandle) clearInterval(procTimerHandle);
+  if (procCreepHandle) clearInterval(procCreepHandle);
+  procTimerHandle = null;
+  procCreepHandle = null;
+  setProcPercent(0);
+  setProcStep("fetch");
+}
 
-          renderTimeline();
-        } catch (err) {
-          setStatus(err.message, "err");
-        } finally {
-          fetchBtn.disabled = false;
-          fetchBtn.textContent = "Load video";
-        }
-      }
+function fmt(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return [h, m, s].map(v => String(v).padStart(2, "0")).join(":");
+}
 
-      // ---- draggable handles ----
-      let dragging = null;
+function parseTime(str) {
+  const parts = str.split(":").map(p => parseInt(p, 10));
+  if (parts.some(isNaN)) return null;
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  if (parts.length === 1) return parts[0];
+  return null;
+}
 
-      function pctToSec(clientX) {
-        const rect = timeline.getBoundingClientRect();
-        const pct = Math.min(
-          1,
-          Math.max(0, (clientX - rect.left) / rect.width),
-        );
-        return pct * videoDuration;
-      }
+function renderTimeline() {
+  if (!videoDuration) return;
+  const startPct = (startSec / videoDuration) * 100;
+  const endPct = (endSec / videoDuration) * 100;
+  selection.style.left = startPct + "%";
+  selection.style.width = (endPct - startPct) + "%";
+  handleStart.style.left = startPct + "%";
+  handleEnd.style.left = endPct + "%";
+  startInput.value = fmt(startSec);
+  endInput.value = fmt(endSec);
+  clipLen.textContent = fmt(endSec - startSec);
+}
 
-      function nearestHandle(clientX) {
-        if (!videoDuration) return "start";
-        const sec = pctToSec(clientX);
-        // whichever handle (start or end) is closer to the click point gets grabbed
-        return Math.abs(sec - startSec) <= Math.abs(sec - endSec)
-          ? "start"
-          : "end";
-      }
+function setStatus(msg, type) {
+  statusEl.textContent = msg;
+  statusEl.className = "status" + (type ? " " + type : "");
+}
 
-      function startDrag(which) {
-        return (e) => {
-          dragging = which;
-          e.preventDefault();
-        };
-      }
-      handleStart.addEventListener("mousedown", startDrag("start"));
-      handleEnd.addEventListener("mousedown", startDrag("end"));
-      handleStart.addEventListener("touchstart", startDrag("start"));
-      handleEnd.addEventListener("touchstart", startDrag("end"));
+// ---- fetch video info ----
+fetchBtn.addEventListener("click", loadVideo);
+urlInput.addEventListener("keydown", e => { if (e.key === "Enter") loadVideo(); });
 
-      // Also allow clicking/dragging anywhere on the timeline track itself —
-      // the 14px handle strips are easy to miss, so grab whichever handle is
-      // nearest to the click and start dragging it immediately.
-      timeline.addEventListener("mousedown", (e) => {
-        if (e.target === handleStart || e.target === handleEnd) return; // already handled above
-        dragging = nearestHandle(e.clientX);
-        onMove(e.clientX);
-        e.preventDefault();
-      });
-      timeline.addEventListener(
-        "touchstart",
-        (e) => {
-          if (e.target === handleStart || e.target === handleEnd) return;
-          const x = e.touches[0].clientX;
-          dragging = nearestHandle(x);
-          onMove(x);
-        },
-        { passive: true },
-      );
+async function loadVideo() {
+  const url = urlInput.value.trim();
+  if (!url) return;
+  fetchBtn.disabled = true;
+  fetchBtn.textContent = "Loading...";
+  setStatus("", "");
 
-      function onMove(clientX) {
-        if (!dragging || !videoDuration) return;
-        const sec = pctToSec(clientX);
-        if (dragging === "start") {
-          startSec = Math.min(sec, endSec - 1);
-          startSec = Math.max(0, startSec);
-        } else {
-          endSec = Math.max(sec, startSec + 1);
-          endSec = Math.min(videoDuration, endSec);
-        }
-        renderTimeline();
-      }
+  try {
+    const res = await fetch(`${API}/api/video-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load video.");
 
-      window.addEventListener("mousemove", (e) => onMove(e.clientX));
-      window.addEventListener(
-        "touchmove",
-        (e) => {
-          if (dragging) onMove(e.touches[0].clientX);
-        },
-        { passive: true },
-      );
-      window.addEventListener("mouseup", () => (dragging = null));
-      window.addEventListener("touchend", () => (dragging = null));
+    videoDuration = data.duration || 0;
+    vidTitle.textContent = data.title || "Untitled";
+    vidUploader.textContent = data.uploader || "";
+    // Thumbnail may be a relative proxy path (/api/thumbnail?url=...) when
+    // the backend needs to proxy it (e.g. X CDN blocks direct loading).
+    // Prefix with API base so the browser requests it from the right host.
+    const thumbUrl = data.thumbnail || "";
+    thumb.src = thumbUrl;
+    thumb.style.display = thumbUrl ? "" : "none";
+    const thumbWrap = document.getElementById("thumbWrap");
+    thumbWrap.classList.remove("no-thumb");
+    thumb.onerror = () => {
+      thumb.style.display = "none";
+      thumbWrap.classList.add("no-thumb");
+    };
+    thumb.onload = () => {
+      thumb.style.display = "";
+      thumbWrap.classList.remove("no-thumb");
+    };
+    videoCard.classList.add("show");
+    timelinePanel.style.display = "block";
 
-      // ---- manual time entry ----
-      startInput.addEventListener("change", () => {
-        const v = parseTime(startInput.value);
-        if (v === null || v < 0) {
-          renderTimeline(); // snap back to last valid value
-          return;
-        }
-        startSec = v;
-        if (startSec >= endSec) {
-          endSec = Math.min(videoDuration, startSec + 30);
-        }
-        renderTimeline();
-      });
-      endInput.addEventListener("change", () => {
-        const v = parseTime(endInput.value);
-        if (v === null || v <= 0) {
-          renderTimeline();
-          return;
-        }
-        endSec = Math.min(v, videoDuration);
-        if (endSec <= startSec) {
-          startSec = Math.max(0, endSec - 30);
-        }
-        renderTimeline();
-      });
+    if (videoDuration > 0) {
+      // Normal case: known duration, visual timeline works as usual.
+      vidDuration.textContent = fmt(videoDuration);
+      timeline.classList.remove("hidden");
+      durationNote.classList.remove("show");
+      startSec = 0;
+      endSec = Math.min(30, videoDuration);
+    } else {
+      // Broadcasts / live replays often don't report a duration (HLS
+      // streams, not fixed-length VOD files) — the percentage-based
+      // timeline has nothing to measure against, so fall back to plain
+      // start/end timecode entry instead of a visual scrubber.
+      vidDuration.textContent = "duration unknown (live/broadcast)";
+      timeline.classList.add("hidden");
+      durationNote.classList.add("show");
+      startSec = 0;
+      endSec = 30;
+      // Use a generous cap since we don't know the real length —
+      // the backend will simply stop at the source's actual end if
+      // your chosen end point runs past it.
+      videoDuration = 60 * 60 * 4; // 4hr soft ceiling just for input validation
+    }
 
-      // ---- download ----
-      downloadBtn.addEventListener("click", startClip);
+    renderTimeline();
+  } catch (err) {
+    setStatus(err.message, "err");
+  } finally {
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = "Load video";
+  }
+}
 
-      async function startClip() {
-        const url = urlInput.value.trim();
-        if (!url || !videoDuration) return;
+// ---- draggable handles ----
+let dragging = null;
 
-        downloadBtn.disabled = true;
-        fetchBtn.disabled = true;
-        setStatus("", "");
-        startProcessingUI();
+function pctToSec(clientX) {
+  const rect = timeline.getBoundingClientRect();
+  const pct = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  return pct * videoDuration;
+}
 
-        try {
-          const res = await fetch(`${API}/api/clip`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url, start: startSec, end: endSec }),
-          });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.detail || "Could not start clip.");
+function nearestHandle(clientX) {
+  if (!videoDuration) return "start";
+  const sec = pctToSec(clientX);
+  // whichever handle (start or end) is closer to the click point gets grabbed
+  return Math.abs(sec - startSec) <= Math.abs(sec - endSec) ? "start" : "end";
+}
 
-          setProcStep("download");
-          const jobId = data.job_id;
-          await pollJob(jobId);
-        } catch (err) {
-          setStatus(err.message, "err");
-          stopProcessingUI();
-        } finally {
-          downloadBtn.disabled = false;
-          fetchBtn.disabled = false;
-        }
-      }
+function startDrag(which) {
+  return (e) => {
+    dragging = which;
+    e.preventDefault();
+  };
+}
+handleStart.addEventListener("mousedown", startDrag("start"));
+handleEnd.addEventListener("mousedown", startDrag("end"));
+handleStart.addEventListener("touchstart", startDrag("start"));
+handleEnd.addEventListener("touchstart", startDrag("end"));
 
-      async function pollJob(jobId) {
-        while (true) {
-          await new Promise((r) => setTimeout(r, 600));
-          const res = await fetch(`${API}/api/clip/${jobId}/status`);
-          const data = await res.json();
+// Also allow clicking/dragging anywhere on the timeline track itself —
+// the 14px handle strips are easy to miss, so grab whichever handle is
+// nearest to the click and start dragging it immediately.
+timeline.addEventListener("mousedown", (e) => {
+  if (e.target === handleStart || e.target === handleEnd) return; // already handled above
+  dragging = nearestHandle(e.clientX);
+  onMove(e.clientX);
+  e.preventDefault();
+});
+timeline.addEventListener("touchstart", (e) => {
+  if (e.target === handleStart || e.target === handleEnd) return;
+  const x = e.touches[0].clientX;
+  dragging = nearestHandle(x);
+  onMove(x);
+}, {passive: true});
 
-          if (data.status === "done") {
-            setProcStep("process");
-            setProcPercent(100);
-            processingLabel.textContent = "Done";
-            setStatus("Clip ready — starting download...", "ok");
-            await new Promise((r) => setTimeout(r, 400));
-            stopProcessingUI();
-            window.location.href = `${API}/api/clip/${jobId}/download`;
-            return;
-          }
-          if (data.status === "error") {
-            stopProcessingUI();
-            throw new Error(data.error || "Clip processing failed.");
-          }
+function onMove(clientX) {
+  if (!dragging || !videoDuration) return;
+  const sec = pctToSec(clientX);
+  if (dragging === "start") {
+    startSec = Math.min(sec, endSec - 1);
+    startSec = Math.max(0, startSec);
+  } else {
+    endSec = Math.max(sec, startSec + 1);
+    endSec = Math.min(videoDuration, endSec);
+  }
+  renderTimeline();
+}
 
-          updateProcessingFromStatus(data);
-        }
-      }
-    </script>
-  </body>
+window.addEventListener("mousemove", e => onMove(e.clientX));
+window.addEventListener("touchmove", e => { if (dragging) onMove(e.touches[0].clientX); }, {passive: true});
+window.addEventListener("mouseup", () => dragging = null);
+window.addEventListener("touchend", () => dragging = null);
+
+// ---- manual time entry ----
+startInput.addEventListener("change", () => {
+  const v = parseTime(startInput.value);
+  if (v === null || v < 0) {
+    renderTimeline(); // snap back to last valid value
+    return;
+  }
+  startSec = v;
+  if (startSec >= endSec) {
+    endSec = Math.min(videoDuration, startSec + 30);
+  }
+  renderTimeline();
+});
+endInput.addEventListener("change", () => {
+  const v = parseTime(endInput.value);
+  if (v === null || v <= 0) {
+    renderTimeline();
+    return;
+  }
+  endSec = Math.min(v, videoDuration);
+  if (endSec <= startSec) {
+    startSec = Math.max(0, endSec - 30);
+  }
+  renderTimeline();
+});
+
+// ---- download ----
+downloadBtn.addEventListener("click", startClip);
+
+async function startClip() {
+  const url = urlInput.value.trim();
+  if (!url || !videoDuration) return;
+
+  downloadBtn.disabled = true;
+  fetchBtn.disabled = true;
+  setStatus("", "");
+  startProcessingUI();
+
+  try {
+    const res = await fetch(`${API}/api/clip`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, start: startSec, end: endSec, quality: qualitySelect.value }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not start clip.");
+
+    setProcStep("download");
+    const jobId = data.job_id;
+    await pollJob(jobId);
+  } catch (err) {
+    setStatus(err.message, "err");
+    stopProcessingUI();
+  } finally {
+    downloadBtn.disabled = false;
+    fetchBtn.disabled = false;
+  }
+}
+
+async function pollJob(jobId) {
+  while (true) {
+    await new Promise(r => setTimeout(r, 600));
+    const res = await fetch(`${API}/api/clip/${jobId}/status`);
+    const data = await res.json();
+
+    if (data.status === "done") {
+      setProcStep("process");
+      setProcPercent(100);
+      processingLabel.textContent = "Done";
+      setStatus("Clip ready — starting download...", "ok");
+      await new Promise(r => setTimeout(r, 400));
+      stopProcessingUI();
+      window.location.href = `${API}/api/clip/${jobId}/download`;
+      return;
+    }
+    if (data.status === "error") {
+      stopProcessingUI();
+      throw new Error(data.error || "Clip processing failed.");
+    }
+
+    updateProcessingFromStatus(data);
+  }
+}
+</script>
+</body>
 </html>
