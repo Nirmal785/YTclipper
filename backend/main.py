@@ -333,22 +333,24 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, 
     out_template = str(DOWNLOAD_DIR / f"{job_id}.%(ext)s")
     section = f"*{seconds_to_hhmmss(start)}-{seconds_to_hhmmss(end)}"
 
-    # Build format selector based on requested quality.
-    # The fallback chain ensures we always get something even if the
-    # exact quality isn't available for this source (common with X/Twitter).
+    # Build format selector — strictly cap at requested height, no silent
+    # upgrade to best quality when the exact resolution isn't available.
+    # Using remux-video preference (mp4 copy) over re-encode where possible
+    # to save RAM and speed up processing.
     if quality == "best":
-        fmt = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
+        fmt = "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b"
     elif quality in ("1080", "720", "480", "360"):
-        h = quality
+        h = int(quality)
+        # Strictly cap at requested height — if unavailable, yt-dlp will
+        # error rather than silently upgrading. User can select "Best" if
+        # they want whatever's available.
         fmt = (
             f"bv*[height<={h}][ext=mp4]+ba[ext=m4a]"
             f"/bv*[height<={h}]+ba"
             f"/b[height<={h}]"
-            f"/bv*[ext=mp4]+ba[ext=m4a]"
-            f"/b[ext=mp4]/b"
         )
     else:
-        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/b"
+        fmt = "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]"
 
     cmd = ["yt-dlp", "--no-playlist"]
     cmd += _cookie_args(source)
@@ -358,7 +360,15 @@ def _run_clip_job(job_id: str, url: str, start: float, end: float, source: str, 
         "--extractor-args", "youtube:player_client=web",
         "--remote-components", "ejs:github",
         "-f", fmt,
+        # Prefer remuxing (copy streams) over re-encoding — much less RAM
+        # and faster. Falls back to merge if streams need conversion.
+        "--remux-video", "mp4",
         "--merge-output-format", "mp4",
+        # Limit concurrent HLS fragment downloads to reduce peak RAM usage.
+        # Default is 1 which is safest for 1GB RAM constraint.
+        "--concurrent-fragments", "1",
+        # Limit download buffer size to reduce memory pressure
+        "--buffer-size", "16K",
         "--newline",
         "--progress-template", PROGRESS_TEMPLATE,
         "--progress-template", FRAGMENT_TEMPLATE,

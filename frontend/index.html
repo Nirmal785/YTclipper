@@ -611,10 +611,10 @@
         <label for="qualitySelect">Quality</label>
         <select id="qualitySelect">
           <option value="best">Best available</option>
-          <option value="1080" selected>1080p</option>
-          <option value="720">720p</option>
-          <option value="480">480p</option>
-          <option value="360">360p</option>
+          <option value="1080" selected>1080p (HD)</option>
+          <option value="720">720p (HD)</option>
+          <option value="480">480p (SD) — smaller file</option>
+          <option value="360">360p (SD) — smallest file</option>
         </select>
       </div>
 
@@ -654,7 +654,7 @@
   </div>
 
 <script>
-const API = "https://ytclipper-production-369c.up.railway.app";
+const API = "http://127.0.0.1:8000";
 
 let currentSource = "youtube";
 const sourceToggle = document.getElementById("sourceToggle");
