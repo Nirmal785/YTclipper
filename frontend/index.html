@@ -611,10 +611,10 @@
         <label for="qualitySelect">Quality</label>
         <select id="qualitySelect">
           <option value="best">Best available</option>
-          <option value="1080" selected>1080p (HD)</option>
-          <option value="720">720p (HD)</option>
-          <option value="480">480p (SD) — smaller file</option>
-          <option value="360">360p (SD) — smallest file</option>
+          <option value="1080" selected>1080p</option>
+          <option value="720">720p</option>
+          <option value="480">480p</option>
+          <option value="360">360p</option>
         </select>
       </div>
 
@@ -654,7 +654,7 @@
   </div>
 
 <script>
-const API = "http://127.0.0.1:8000";
+const API = "https://ytclipper-production-369c.up.railway.app";
 
 let currentSource = "youtube";
 const sourceToggle = document.getElementById("sourceToggle");
@@ -884,77 +884,67 @@ async function loadVideo() {
   fetchBtn.textContent = "Loading...";
   setStatus("", "");
 
-  // Railway serverless: first request after idle takes 15-30s to wake up.
-  // Retry up to 3 times so the user doesn't see "failed to fetch" just
-  // because the server was sleeping.
-  const MAX_RETRIES = 3;
-  let data = null;
+  try {
+    const res = await fetch(`${API}/api/video-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load video.");
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      if (attempt > 1) {
-        setStatus(`Server waking up... (attempt ${attempt}/${MAX_RETRIES})`, "");
-        await new Promise(r => setTimeout(r, 6000));
-      }
-      const res = await fetch(`${API}/api/video-info`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-        signal: AbortSignal.timeout(40000),
-      });
-      data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Could not load video.");
-      break; // success — exit retry loop
-    } catch (err) {
-      if (attempt === MAX_RETRIES) {
-        setStatus(err.message || "Could not reach server. Try again in a moment.", "err");
-        fetchBtn.disabled = false;
-        fetchBtn.textContent = "Load video";
-        return;
-      }
-      // network error (server sleeping) — will retry
-    }
-  }
-
-  // Populate video card
-  videoDuration = data.duration || 0;
-  vidTitle.textContent = data.title || "Untitled";
-  vidUploader.textContent = data.uploader || "";
-  const thumbUrl = data.thumbnail || "";
-  const thumbWrap = document.getElementById("thumbWrap");
-  thumbWrap.classList.remove("no-thumb");
-  if (thumbUrl) {
+    videoDuration = data.duration || 0;
+    vidTitle.textContent = data.title || "Untitled";
+    vidUploader.textContent = data.uploader || "";
+    // Thumbnail may be a relative proxy path (/api/thumbnail?url=...) when
+    // the backend needs to proxy it (e.g. X CDN blocks direct loading).
+    // Prefix with API base so the browser requests it from the right host.
+    const thumbUrl = data.thumbnail || "";
     thumb.src = thumbUrl;
-    thumb.style.display = "";
-    thumb.onerror = () => { thumb.style.display = "none"; thumbWrap.classList.add("no-thumb"); };
-    thumb.onload = () => { thumb.style.display = ""; thumbWrap.classList.remove("no-thumb"); };
-  } else {
-    thumb.src = "";
-    thumb.style.display = "none";
-    thumbWrap.classList.add("no-thumb");
-  }
-  videoCard.classList.add("show");
-  timelinePanel.style.display = "block";
+    thumb.style.display = thumbUrl ? "" : "none";
+    const thumbWrap = document.getElementById("thumbWrap");
+    thumbWrap.classList.remove("no-thumb");
+    thumb.onerror = () => {
+      thumb.style.display = "none";
+      thumbWrap.classList.add("no-thumb");
+    };
+    thumb.onload = () => {
+      thumb.style.display = "";
+      thumbWrap.classList.remove("no-thumb");
+    };
+    videoCard.classList.add("show");
+    timelinePanel.style.display = "block";
 
-  if (videoDuration > 0) {
-    vidDuration.textContent = fmt(videoDuration);
-    timeline.classList.remove("hidden");
-    durationNote.classList.remove("show");
-    startSec = 0;
-    endSec = Math.min(30, videoDuration);
-  } else {
-    vidDuration.textContent = "duration unknown (live/broadcast)";
-    timeline.classList.add("hidden");
-    durationNote.classList.add("show");
-    startSec = 0;
-    endSec = 30;
-    videoDuration = 60 * 60 * 4;
-  }
+    if (videoDuration > 0) {
+      // Normal case: known duration, visual timeline works as usual.
+      vidDuration.textContent = fmt(videoDuration);
+      timeline.classList.remove("hidden");
+      durationNote.classList.remove("show");
+      startSec = 0;
+      endSec = Math.min(30, videoDuration);
+    } else {
+      // Broadcasts / live replays often don't report a duration (HLS
+      // streams, not fixed-length VOD files) — the percentage-based
+      // timeline has nothing to measure against, so fall back to plain
+      // start/end timecode entry instead of a visual scrubber.
+      vidDuration.textContent = "duration unknown (live/broadcast)";
+      timeline.classList.add("hidden");
+      durationNote.classList.add("show");
+      startSec = 0;
+      endSec = 30;
+      // Use a generous cap since we don't know the real length —
+      // the backend will simply stop at the source's actual end if
+      // your chosen end point runs past it.
+      videoDuration = 60 * 60 * 4; // 4hr soft ceiling just for input validation
+    }
 
-  renderTimeline();
-  setStatus("", "");
-  fetchBtn.disabled = false;
-  fetchBtn.textContent = "Load video";
+    renderTimeline();
+  } catch (err) {
+    setStatus(err.message, "err");
+  } finally {
+    fetchBtn.disabled = false;
+    fetchBtn.textContent = "Load video";
+  }
 }
 
 // ---- draggable handles ----
